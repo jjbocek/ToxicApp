@@ -13,7 +13,7 @@ rocchio_prototypes = {}
 nearest_centroid = NearestCentroid()
 
 def load_data():
-    file_object = open('../clean_data1.p', 'rb')
+    file_object = open('../Final_Project/clean_data1.p', 'rb')
     clean_data = pickle.load(file_object)
     train_ds = clean_data[0]
 
