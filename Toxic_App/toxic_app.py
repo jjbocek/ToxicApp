@@ -11,6 +11,11 @@ from sklearn.ensemble import VotingClassifier
 
 toxic_app_classes = {1: 'non-toxic', 2: 'toxic', 3: 'severe toxic'}
 
+'''
+Loads a clean version of the training data from file
+'''
+
+
 def load_data():
     file_object = open('../Final_Project/clean_data1.p', 'rb')
     clean_data = pickle.load(file_object)
@@ -23,9 +28,26 @@ def load_data():
     return train_comments_df, train_labels_df
 
 
+'''
+Transforms the training data into a TF*IDF matrix
+@param train_data: traing_data
+@return tf_idf transformed matrix of data as well as the data transformer
+'''
+
+
 def transform_data(train_data):
     train_x_tfidf, transformer = tfidf_func(train_data, 1, 0.6, 'None')
     return train_x_tfidf, transformer
+
+
+'''
+Creates a TF*IDF matrix and returns the vectorizer for later use
+@param data: training data
+@param min_df: min_df to pass into TfidfVectorizer
+@param max_df: max_df to pass into TfidfVectorizer
+@param norm: a norm value to pass into TfidfVectorizer (if None, then it won't be passed)
+@return returns tfidf matrix and vectorizer
+'''
 
 
 def tfidf_func(data, min_df, max_df, norm):
@@ -38,6 +60,13 @@ def tfidf_func(data, min_df, max_df, norm):
     X_tfidf = txt_tranformed.toarray()
     # terms = txt_fitted.get_feature_names_out()
     return X_tfidf, vectorizer
+
+
+'''
+A method to train all models and return an ensemble model
+@param transformed_train_data: the training data which has already been transformed
+@param train_labels: the corresponding training labels for the data
+'''
 
 
 def train_and_get_model(transformed_train_data, train_labels):
@@ -93,7 +122,16 @@ def train_and_get_model(transformed_train_data, train_labels):
     return eclf2
 
 
-# generate a doc2vec matrix of the training data
+'''
+A method to classify a test comment
+This method will clean and transform the data prior to predicting
+@param test_data: the raw test data
+@param data_transformer: the data transformer used to transform the train data
+@param model: the model used to predict the test comment
+@return the predicted class
+'''
+
+
 def classify(test_data, data_transformer, model):
     clean_test_data = clean_comment_util.clean_comment(test_data)
     test_data_array = [clean_test_data]
