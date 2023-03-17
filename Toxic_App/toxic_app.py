@@ -93,7 +93,7 @@ def classify(test_data, model):
     clean_test_data = clean_comment_util.clean_comment(test_data)
     clean_test_data_array = [clean_test_data]
     predicted_class = model.predict(clean_test_data_array)
-    print("The predicted class is:" + str(predicted_class))
+    # print("The predicted class is:" + str(predicted_class))
     return toxic_app_classes[predicted_class[0]]
 
 
@@ -112,5 +112,5 @@ while True:
         print("Good Bye!")
         break
     else:
-        print("This comment was classified as:" + str(classify(raw_input, ensemble_model)))
+        print("This comment was classified as: " + str(classify(raw_input, ensemble_model)))
         raw_input = input("Please enter a comment to classify or else 'q' to quit:")
