@@ -1,17 +1,15 @@
 import pickle
-import rocchio_model
-import doc2vec_methods
-from gensim.models import doc2vec
+
 import clean_comment_util
-import numpy as np
 from sklearn.neighbors import NearestCentroid
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import TruncatedSVD
+from sklearn.preprocessing import Normalizer
+from sklearn.linear_model import SGDClassifier
+from sklearn.naive_bayes import ComplementNB
+from sklearn.ensemble import VotingClassifier
 
 toxic_app_classes = {1: 'non-toxic', 2: 'toxic', 3: 'severe toxic'}
-d2v_model = doc2vec.Doc2Vec(dm=0, vector_size=1000, window=5, hs=1, negative=0)
-rocchio_prototypes = {}
-nearest_centroid = NearestCentroid()
-
 
 def load_data():
     file_object = open('../Final_Project/clean_data1.p', 'rb')
@@ -25,112 +23,101 @@ def load_data():
     return train_comments_df, train_labels_df
 
 
-def TFIDF_func(data):
-    vectorizer = TfidfVectorizer(smooth_idf=True, sublinear_tf=False, norm=None,
-                                 analyzer='word')
+def transform_data(train_data):
+    train_x_tfidf, transformer = tfidf_func(train_data, 1, 0.6, 'None')
+    return train_x_tfidf, transformer
+
+
+def tfidf_func(data, min_df, max_df, norm):
+    if norm != 'None':
+        vectorizer = TfidfVectorizer(min_df=min_df, max_df=max_df, norm=norm)
+    else:
+        vectorizer = TfidfVectorizer(min_df=min_df, max_df=max_df)
     txt_fitted = vectorizer.fit(data)
     txt_tranformed = txt_fitted.transform(data)
     X_tfidf = txt_tranformed.toarray()
-    terms = txt_fitted.get_feature_names_out()
-    return X_tfidf, terms
+    # terms = txt_fitted.get_feature_names_out()
+    return X_tfidf, vectorizer
 
 
-def get_feature_matrix(feature_extraction, data):
-    print("Selected feature extraction: " + str(feature_extraction))
-    if feature_extraction == 'td_idf':
-        # generate a td_idf matrix of the training data
-        return 0
-    elif feature_extraction == 'doc2vec':
-        train_vectors = doc2vec_methods.get_doc2vec_vectors(d2v_model, data)
-        return train_vectors
-    else:
-        print("Unrecognized feature extraction method.  Using td_idf.")
-        return 0
+def train_and_get_model(transformed_train_data, train_labels):
+    # Best Params for NearestCentroid Model
+    # token_value: TfidfVectorizer(max_df=0.6)
+    # token_value__max_df: 0.6
+    # token_value__min_df: 1
 
+    # train_x_tfidf_nearest_centroid, transformer= tfidf_func(train_data, 1, 0.6, 'None')
 
-def train_models(model, comments, labels):
-    print("Training a " + model + " model.")
-    if model == "gd":
-        # train gd model
-        return 0
-    elif model == "kmeans":
-        # train kmeans model
-        return 0
-    elif model == "rocchio":
-        global rocchio_prototypes
-        rocchio_prototypes = rocchio_model.rocchio_train(comments, labels)
-    elif model == "nb":
-        # train nb model
-        return 0
-    elif model == "knn":
-        # train knn model
-        return 0
-    else:
-        print("Unknown model inputted, using gradiant descent instead.")
-        return 0
+    # Train nearest centroid model with Best Parameters
+    clf1 = NearestCentroid(metric='cosine')
+    # clf1.fit(train_x_tfidf_nearest_centroid, train_labels)
 
+    # Best Params for NB Model
+    # Pipeline = Pipeline(steps=[('vect', TfidfVectorizer()), ('clf', ComplementNB())])
+    # Best parameters =
+    # vect__max_df: 0.6
+    # vect__min_df: 3
+    # vect__norm: l1
 
-def transform_test_data(test_data, feature_extraction):
-    if feature_extraction == 'td_idf':
-        # generate a td_idf vector of this comment
-        return 0
-    elif feature_extraction == 'doc2vec':
-        # infer a doc2vec vector of this comment
-        return d2v_model.infer_vector(doc2vec_methods.tokenize_each_comment(test_data))
+    # create tfidf feature matrix for NB Model
+    # train_x_tfidf_nb, transformer = tfidf_func(transformed_train_data, 3, 0.6, 'l1')
+    clf2 = ComplementNB()
+    # clf2.fit(train_x_tfidf_nb, train_labels)
+
+    # Best Params for Logistic Regression
+    # clf__l1_ratio: 0.9
+    # clf__loss: log
+    # clf__n_jobs: -1
+    # clf__penalty: elasticnet
+    # reduce_dim: Pipeline(steps=[('truncatedsvd', TruncatedSVD(n_components=109)),
+    #                 ('normalizer', Normalizer(copy=False))])
+    # token_value: TfidfVectorizer(max_df=0.6)
+    # token_value__max_df: 0.6
+    # token_value__min_df: 1
+    # create tfidf feature matrix for NearestCentroid Model
+
+    # create tfidf feature matrix for Logistic Regression Model
+    # train_x_tfidf_lr = tfidf_func(train_data, 1, 0.6, 'None')
+
+    # Train Logistic Regression Model with Best Parameters
+    normalizer = Normalizer(copy=False)
+    svd = TruncatedSVD(n_components=109, random_state=516)
+    # lg_train_data = normalizer.fit_transform(svd.fit_transform(transformed_train_data))
+    clf3 = SGDClassifier(l1_ratio=0.9, loss='log', n_jobs=-1, penalty='elasticnet', random_state=961)
+    # clf3.fit(lg_train_data, train_labels)
+
+    # Lastly create an ensemble models with all 3 models
+    eclf2 = VotingClassifier(estimators=[('nc', clf1), ('nb', clf2), ('sgd', clf3)], voting='hard')
+    eclf2.fit(transformed_train_data, train_labels)
+
+    return eclf2
 
 
 # generate a doc2vec matrix of the training data
-def classify(test_data, feature_extraction, model):
+def classify(test_data, data_transformer, model):
     clean_test_data = clean_comment_util.clean_comment(test_data)
-    test_vector = transform_test_data(clean_test_data, feature_extraction)
+    test_data_array = [clean_test_data]
+    test_x_tfidf = data_transformer.transform(test_data_array)
 
-    if model == "gd":
-        # train gd model
-        return 0
-    elif model == "kmeans":
-        # train kmeans model
-        return 0
-    elif model == "rocchio":
-        global rocchio_prototypes
-        predicted_class = rocchio_model.rocchio_classifier(rocchio_prototypes, test_vector)
-        print("The predicted class was: " + str(predicted_class))
-    elif model == "nb":
-        # train nb model
-        return 0
-    elif model == "knn":
-        # train knn model
-        return 0
-    return toxic_app_classes[predicted_class]
+    predicted_class = model.predict(test_x_tfidf)
+    print("The predicted class is:" + str(predicted_class))
+    return toxic_app_classes[predicted_class[0]]
 
 
-################################Main Program Begins Here #########################
+###############################Main Program Begins Here #########################
+
 print("Welcome to the Toxic Comment Identifier App.")
 train, train_labels = load_data()
 
-# feature_transformation_method = input("Please select a feature extraction method to use.  Type 'td_idf' or 'doc2vec'.")
-# training_matrix = get_feature_matrix(feature_transformation_method, train)
+transformed_data, data_transformer = transform_data(train)
 
-# create tfidf feature matrix
-trainX_tfidf, terms_train = TFIDF_func(train)
+model = train_and_get_model(transformed_data, train_labels)
 
-# create the top 3 models with best parameters
-clf1 = NearestCentroid(metric='cosine')
-#clf2 = RandomForestClassifier(n_estimators=50, random_state=1)
-#clf3 = GaussianNB()
-
-# model_selection = input("Please select a model to use. Your choices are:\n"
-#                         "Gradient Descent/Logistic Regression (type 'gd')\n"
-#                         "Kmeans (type 'kmeans')\n"
-#                         "Rocchio Classification(type 'rocchio')\n"
-#                         "Naive Bayes(type 'nb')\n"
-#                         "KNN (type 'knn')")
-#
-# train_models(model_selection, training_matrix, np.array(train_labels))
-# test_data = input("Please enter a comment to classify or else 'q' to quit:")
-# while True:
-#     if test_data == 'q':
-#         print("Good Bye!")
-#         break
-#     else:
-#         print("This comment was classified as:" + str(classify(test_data, feature_transformation_method, model_selection)))
-#         test_data = input("Please enter a comment to classify or else 'q' to quit:")
+test_data = input("Please enter a comment to classify or else 'q' to quit:").lower().strip()
+while True:
+    if test_data == 'q':
+        print("Good Bye!")
+        break
+    else:
+        print("This comment was classified as:" + str(classify(test_data, data_transformer, model)))
+        test_data = input("Please enter a comment to classify or else 'q' to quit:")
