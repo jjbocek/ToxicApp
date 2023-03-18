@@ -10,7 +10,13 @@ from sklearn.naive_bayes import ComplementNB
 from sklearn.ensemble import VotingClassifier
 from sklearn.pipeline import make_pipeline
 
-toxic_app_classes = {1: 'non-toxic', 2: 'toxic', 3: 'severe toxic'}
+# Used to suppress warning about using cosine distance for NearestCentroid classifier
+import warnings
+warnings.simplefilter("ignore", UserWarning)
+
+# Dictionary that contains labels for each class used
+toxic_app_classes = {1: 'non-toxic', 2: 'toxic', 3: 'severe-toxic'}
+
 
 '''
 Loads a clean version of the training data from file
@@ -98,10 +104,10 @@ def classify(test_data, model):
 
 
 '''
-Main Program Beings Here
+Main Program Begins Here
 '''
 
-print("Welcome to the Toxic Comment Identifier App.")
+print("Welcome to the Toxic Comment Identifier App!")
 train, train_labels = load_data()
 
 ensemble_model = train_and_get_model(train, train_labels)
