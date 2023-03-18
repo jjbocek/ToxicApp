@@ -13,3 +13,8 @@ All Notebooks used for this project are located in the Final_Project Folder
 * We developed a very simple command-line application that trains the best 3 models we evaluated and puts them into an ensemble model for the application to use. 
 * The application will prompt the user for a comment and then classify it using the chosen model.
 * This application resides in the Toxic_App/ directory and is called toxic_app.py.  It can simply be run by running python toxicApp.py.
+
+## Overview of Project
+* A final project report is located in this folder and is named as "Toxic_App_Final_Report.pdf"
+* A video overview of this project can be accessed here: https://vimeo.com/809245926#t=15
+* A .mp4 file of the overview is in this folder and is named as "Toxic_App_Identifier.mp4"
