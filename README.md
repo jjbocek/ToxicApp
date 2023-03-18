@@ -18,3 +18,4 @@ All Notebooks used for this project are located in the Final_Project Folder
 * A final project report is located in this folder and is named as "Toxic_App_Final_Report.pdf"
 * A video overview of this project can be accessed here: https://vimeo.com/809245926#t=15
 * A .mp4 file of the overview is in this folder and is named as "Toxic_App_Identifier.mp4"
+* This project is available in Github under this link: https://github.com/jjbocek/ToxicApp
